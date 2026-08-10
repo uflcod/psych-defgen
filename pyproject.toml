@@ -1,0 +1,39 @@
+[project]
+name = "psych-defgen"
+version = "0.0.1a1"
+description = "A Python package that retrieves scientific literature and generates evidence-based definitions for psychological constructs."
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [
+    { name = "Damayanthi Jesudas", email = "6574003+jesudas@users.noreply.github.com" }
+]
+requires-python = ">=3.11"
+
+dependencies = [
+    "biopython",
+    "beautifulsoup4",
+    "click>=8.0",
+    "lxml",
+    "numpy",
+    "pandas",
+    "python-dotenv",
+    "requests",
+    "scikit-learn",
+    "sentence-transformers",
+    "torch",
+    "tqdm",
+    "playwright>=1.61.0",
+]
+
+[project.scripts]
+psych-defgen = "psych_defgen.main:main"
+
+[build-system]
+requires = ["uv_build>=0.11.26,<0.12.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+]
