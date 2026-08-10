@@ -5,7 +5,7 @@ Psychological Construct Definition Generator is a Python package for generating 
 
 ## Overview
 
-The package implements a retrieval-augmented generation (RAG) workflow that searches the biomedical literature for a target psychological construct, retrieves relevant PubMed abstracts and PubMed Central (PMC) full-text articles, extracts candidate definition statements, ranks evidence using semantic similarity, and generates a concise evidence-based definition suitable for ontology development and expert curation.
+The package implements a retrieval-augmented generation (RAG) workflow that searches the biomedical literature for a target psychological construct, retrieves relevant PubMed abstracts and PubMed Central (PMC) full-text articles, extracts candidate definition statements, ranks evidence using semantic similarity, and generates a concise evidence-based definition suitable for ontology development and expert curation. The APA Dictionary of Psychology is used only to verify and reference existing dictionary entries. APA content is not used to generate the literature-derived definition.
 
 
 ## Features
@@ -15,10 +15,11 @@ The package implements a retrieval-augmented generation (RAG) workflow that sear
 - Retrieve full-text articles from PubMed Central (PMC), when available.
 - Retrieve PubMed abstracts as fallback evidence.
 - Extract candidate definition statements.
-- Chunk and index retrieved evidence.
+- Chunk and prepare retrieved evidence for semantic retrieval.
 - Perform semantic retrieval using sentence-transformer embeddings.
 - Rank evidence passages by semantic relevance.
 - Generate ontology-style definitions.
+- Verify APA Dictionary entries and provide the official reference URL when available.
 - Export definitions and supporting evidence as Markdown.
 
 
@@ -29,6 +30,7 @@ The package implements a retrieval-augmented generation (RAG) workflow that sear
 
 ```bash
 pip install psych-defgen
+playwright install chromium
 ```
 
 
@@ -45,10 +47,12 @@ To install development version from GitHub:
 
 
 ```bash
-git clone https://github.com/Buffalo-Ontology-Group/psychological_construct_definition_generator.git
-cd psychological_construct_definition_generator
+git clone https://github.com/uflcod/psych-defgen.git
+cd psych-defgen
 
 pip install -e .
+playwright install chromium
+
 ```
 
 Editable installation allows you to make changes to the source code and use them immediately without reinstalling the package.
@@ -189,6 +193,14 @@ The output filename is automatically generated from the requested psychological 
 
 - Python 3.11+
 - Valid NCBI email address
+- Chromium browser installed thorugh Playwright
+
+Install the required Playwright browser with 
+
+```bash
+playwright install chromium
+```
+
 
 An NCBI API key is optional but recommended for higher request rate limits.
 
