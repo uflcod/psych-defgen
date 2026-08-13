@@ -7,6 +7,9 @@ Psychological Construct Definition Generator is a Python package for generating 
 
 The package implements a retrieval-augmented generation (RAG) workflow that searches the biomedical literature for a target psychological construct, retrieves relevant PubMed abstracts and PubMed Central (PMC) full-text articles, extracts candidate definition statements, ranks evidence using semantic similarity, and generates a concise evidence-based definition suitable for ontology development and expert curation. The APA Dictionary of Psychology is used only to verify and reference existing dictionary entries. APA content is not used to generate the literature-derived definition.
 
+## Workflow
+
+![Workflow diagram: psych-defgen](images/psych-defgen-workflow.png)
 
 ## Features
 
