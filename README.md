@@ -1,11 +1,12 @@
-# Psychological Construct Definition Generator
+# Psychological Construct Definition Retrieval
 
-Psychological Construct Definition Generator is a Python package for generating evidence-based ontology-style definitions of psychological constructs from PubMed and PubMed Central (PMC) literature.
+Psychological Construct Definition Retrieval is a Python package for retrieving evidence-based definitions of psychological constructs from PubMed and PubMed Central (PMC) literature.
 
 
 ## Overview
 
-The package implements a retrieval-augmented generation (RAG) workflow that searches the biomedical literature for a target psychological construct, retrieves relevant PubMed abstracts and PubMed Central (PMC) full-text articles, extracts candidate definition statements, ranks evidence using semantic similarity, and generates a concise evidence-based definition suitable for ontology development and expert curation. The APA Dictionary of Psychology is used only to verify and reference existing dictionary entries. APA content is not used to generate the literature-derived definition.
+The package implements a literature retrieval workflow that searches the biomedical literature for a target psychological construct, retrieves relevant PubMed abstracts and PubMed Central (PMC) full-text articles, candidate definition statements, ranks evidence using semantic similarity, and selects the strongest explicit definition found in the retrieved literature. The APA Dictionary of Psychology is used only to verify and reference existing dictionary entries. APA content is not used to identify definitions from the scientific literature.
+
 
 ## Workflow
 
@@ -126,7 +127,7 @@ If both environment variables and command-line arguments are provided, the comma
 
 # Usage
 
-Generate a definition for a psychological construct:
+Retrieve a definition for a psychological construct:
 
 ```bash
 psych-defgen loneliness
@@ -181,14 +182,14 @@ psych-defgen --help
 # Output
 
 
-By default, generated definitions are saved as Markdown files in the `outputs` directory. A custom output file can be specified using the `--output` option.
+By default, retrieved definitions and supporting evidence are saved as Markdown files in the `outputs` directory. A custom output file can be specified using the `--output` option.
 
 
 ```text
 outputs/loneliness_definition.md
 ```
 
-The output filename is automatically generated from the requested psychological construct.
+The output filename is automatically created from the requested psychological construct.
 
 ---
 
