@@ -17,7 +17,7 @@ The package implements a retrieval-augmented generation (RAG) workflow that sear
 - Search PubMed for articles related to a psychological construct.
 - Retrieve full-text articles from PubMed Central (PMC), when available.
 - Retrieve PubMed abstracts and examine them alongside available full-text articles.
-- Extract explicit candidate definition statements from PMC full text and PubMed abstracts
+- Extract explicit candidate definition statements from PMC full text and PubMed abstracts.
 - Chunk and prepare retrieved evidence for semantic retrieval.
 - Perform semantic retrieval using sentence-transformer embeddings.
 - Rank evidence passages by semantic relevance.
