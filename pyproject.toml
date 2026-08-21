@@ -7,7 +7,7 @@ license = "MIT"
 license-files = ["LICENSE"]
 authors = [
     { name = "Damayanthi Jesudas", email = "6574003+jesudas@users.noreply.github.com" },
-    { name = "William Duncan", email = "3186638+wdduncan@users.noreply.github.com" }
+    { name = "William Duncan" }
 ]
 requires-python = ">=3.11"
 
