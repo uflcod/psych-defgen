@@ -1,12 +1,13 @@
 [project]
 name = "psych-defgen"
 version = "0.0.1a1"
-description = "A Python package that retrieves scientific literature and generates evidence-based definitions for psychological constructs."
+description = "A Python package for retrieving evidence-based definitions of psychological constructs from scientific literature."
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]
 authors = [
-    { name = "Damayanthi Jesudas", email = "6574003+jesudas@users.noreply.github.com" }
+    { name = "Damayanthi Jesudas", email = "6574003+jesudas@users.noreply.github.com" },
+    { name = "William Duncan", email = "3186638+wdduncan@users.noreply.github.com" }
 ]
 requires-python = ">=3.11"
 
