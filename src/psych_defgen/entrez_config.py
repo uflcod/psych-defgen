@@ -1,6 +1,9 @@
 import os
 
 from Bio import Entrez
+from dotenv import load_dotenv
+
+load_dotenv()
 
 
 def configure_entrez(
