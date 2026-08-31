@@ -20,7 +20,7 @@ The APA Dictionary of Psychology is used only to verify and reference existing d
 - Extract candidate definition and conceptual passages from PMC full text and PubMed abstracts.
 - Chunk and prepare retrieved evidence for semantic retrieval.
 - Perform semantic retrieval using sentence-transformer embeddings.
-- Rank evidence passages by semantic relevance.
+- Rank evidence passages by cosine similarity to the construct-focused definitional query.
 - Select the strongest explicit definition found in the retrieved literature.
 - Verify APA Dictionary entries and provide the official reference URL when available.
 - Export the definition from literature and supporting evidence as Markdown.
