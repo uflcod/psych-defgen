@@ -17,7 +17,7 @@ The APA Dictionary of Psychology is used only to verify and reference existing d
 - Search PubMed for articles related to a psychological construct.
 - Retrieve full-text articles from PubMed Central (PMC), when available.
 - Retrieve PubMed abstracts and examine them alongside available full-text articles.
-- Extract explicit candidate definition statements from PMC full text and PubMed abstracts.
+- Extract candidate definition and conceptual passages from PMC full text and PubMed abstracts.
 - Chunk and prepare retrieved evidence for semantic retrieval.
 - Perform semantic retrieval using sentence-transformer embeddings.
 - Rank evidence passages by semantic relevance.
@@ -60,7 +60,7 @@ Editable installation allows you to make changes to the source code and use them
 
 ---
 
-# Configure NCBI Credentials
+## Configure NCBI Credentials
 
 This package uses the NCBI Entrez API to retrieve PubMed and PubMed Central articles.
 
@@ -88,7 +88,7 @@ Do not commit the `.env` file to the repository.
 
 ---
 
-# Usage
+## Usage
 
 Retrieve a definition for a psychological construct:
 
@@ -117,15 +117,6 @@ psych-defgen "social isolation" \
     --output results/social_isolation_definition.md
 ```
 
-Options can be combined:
-
-```bash
-psych-defgen "social isolation" \
-    --max-results 20 \
-    --top-k 5 \
-    --output results/social_isolation_definition.md
-```
-
 Display all available command-line options:
 
 ```bash
@@ -135,7 +126,7 @@ psych-defgen --help
 
 ---
 
-# Output
+## Output
 
 By default, retrieved definitions and supporting evidence are saved as Markdown files in the `outputs` directory. A custom output file can be specified using the `--output` option.
 
@@ -148,7 +139,7 @@ The output filename is automatically created from the requested psychological co
 
 ---
 
-# Requirements
+## Requirements
 
 - Python 3.11+
 - Valid NCBI email address
@@ -165,10 +156,10 @@ An NCBI API key is optional but recommended for higher request rate limits.
 
 ---
 
-# License
+## License
 
 This project is licensed under the MIT License.
 
-# Citation
+## Citation
 
 Citation information will be provided upon publication of the accompanying manuscript.
