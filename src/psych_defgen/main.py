@@ -360,15 +360,20 @@ def main(
     )
 
 
-     
+    print(
+        "DEBUG APA:",
+        type(result["apa_entry"]),
+        result["apa_entry"],
+    )
+
     # =====================================================
     # Save output
     # =====================================================
 
     output_path = save_output(
         term=term,
-        apa_entry=["apa_entry"],
-        definition_from_literature=("definition"),
+        apa_entry=result["apa_entry"],
+        definition_from_literature=result["definition"],
         evidence=result["evidence"],
         output_path=output,
     )
