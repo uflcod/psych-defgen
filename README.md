@@ -24,6 +24,7 @@ The APA Dictionary of Psychology is used only to verify and reference existing d
 - Select the strongest explicit definition found in the retrieved literature.
 - Verify APA Dictionary entries and provide the official reference URL when available.
 - Export the definition from literature and supporting evidence as Markdown.
+- Streamlit-based web interface for interactive construct retrieval.
 
 
 ---
@@ -125,6 +126,44 @@ psych-defgen --help
 
 
 ---
+
+## Web Interface
+
+psych-defgen also provides a Streamlit-based web interface for retrieving evidence-based definitions wothout using the command line.
+
+Start the wen interface from the project directory:
+
+```bash
+uv run streamlit run src/psych-defgen/streamlit_app.py
+```
+
+Streamlit will start a local web server and provide a URL, typically:
+
+```text
+http://localhost:8501
+```
+
+Enter a psychological construct in the web interface, optionally adjust the maximum number of evidence passages, and select **Retrieve definition**.
+
+The web interface uses the same retrieval pipeline as the command-line interface. The retrieval, evidence ranking, and explicit-definition selection logic are therefore shared between CLI and web interface rather than implemented separately.
+
+### NCBI Credentials in the Web Interface
+
+- The web interface reads the NCBI email address and optional API key from environment variables:
+
+```env
+NCBI_EMAIL=YOUR_NCBI_EMAIL
+NCBI_API_KEY=YOUR_NCBI_API_KEY
+```
+
+- These values can be defined in the local `.env` environment configuration file.
+
+- NCBI credentials are used internally by the retrieval pipeline and are not displayed in the Streamlit interface.
+
+- Then `.env` file should not be committed to Git and should remain excluded through `.gitignore`. Do not place NCBI credentials directly in the source code.
+
+- When running `psych-defgen` locally, the credentials remain part of the local environment. If the Streamlit application is deployed to a server or hosting platform, configure the NCBI credentials using the platform's environment-variable rather than committing or uploading the local `.env` file.
+
 
 ## Output
 
