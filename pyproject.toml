@@ -25,6 +25,7 @@ dependencies = [
     "torch",
     "tqdm",
     "playwright>=1.61.0",
+    "streamlit",
 ]
 
 [project.scripts]
