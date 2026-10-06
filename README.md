@@ -12,6 +12,7 @@ The APA Dictionary of Psychology is used only to verify and reference existing d
 
 ![Workflow diagram: psych-defgen](images/psych-defgen-workflow.png)
 
+
 ## Features
 
 - Search PubMed for articles related to a psychological construct.
