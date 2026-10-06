@@ -2,15 +2,19 @@ from psych_defgen.apa_dictionary import (
     get_apa_dictionary_entry,
 )
 from psych_defgen.chunk_text import chunk_article
+
 from psych_defgen.extract_definition_candidates import (
     extract_definition_candidates,
 )
 from psych_defgen.get_pmc_articles import get_pmc_ids
+
 from psych_defgen.models import Article
+
 from psych_defgen.parse_fulltext import (
     get_full_text_from_pmcid,
 )
 from psych_defgen.pubmed_search import search_pubmed
+
 from psych_defgen.rag_retrieval import (
     retrieve_relevant_texts,
 )
@@ -85,6 +89,13 @@ def run_pipeline(
     """
     Run the psych-defgen retrieval and
     definition-selection workflow.
+    
+    PMC full text is preferred when available
+    and usable.
+
+    PubMed abstracts are used as fallback
+    evidence when usable PMC full text is
+    unavailable.
     """
 
     # -------------------------------------------------
@@ -131,8 +142,17 @@ def run_pipeline(
         f"{len(pmid_to_pmcid)}"
     )
 
+    # -------------------------------------------------
+    # Storage
+    # -------------------------------------------------
+
     definition_candidates = []
     full_text_chunks = []
+
+    # Track PMIDs for which usable PMC full text was successfully retrieved and processed.
+    # Any PMID not added to this set will be eligible for PubMed abstract fallback.
+
+    processed_pmc_pmids = set()
 
     # -------------------------------------------------
     # PMC full text
@@ -164,12 +184,15 @@ def run_pipeline(
         if term.lower() not in text.lower():
             continue
 
+        processed_pmc_pmids.add(str(pmid))
+
         candidates = extract_definition_candidates(
             text,
             term,
         )
 
         for candidate in candidates:
+
             definition_candidates.append(
                 create_pmc_evidence_record(
                     text=candidate,
@@ -199,21 +222,43 @@ def run_pipeline(
                 )
             )
 
+
+    fallback_pmids = [
+        pmid
+        for pmid in pmids
+        if str(pmid) not in processed_pmc_pmids
+    ]
+
+    print(
+        "PMC articles successfully processed: "
+        f"{len(processed_pmc_pmids)}"
+    )
+
+    print(
+        "PubMed abstracts required as fallback: "
+        f"{len(fallback_pmids)}"
+    )
+
+
     # -------------------------------------------------
     # PubMed abstracts
     # -------------------------------------------------
 
-    print(
-        "Fetching PubMed abstracts."
-    )
+    abstract_records = []
 
-    abstract_records = fetch_pubmed_abstracts(
-        pmids,
-        email=email,
-        api_key=api_key,
-    )
+    if fallback_pmids:
 
-    abstract_chunks = []
+        print(
+            "Fetching PubMed abstracts for articles without usable PMC full text."
+        )
+
+        abstract_records = fetch_pubmed_abstracts(
+            fallback_pmids,
+            email=email,
+            api_key=api_key,
+        )
+
+    abstract_passages = []
     abstract_definition_candidates = []
 
     for record in abstract_records:
@@ -233,7 +278,7 @@ def run_pipeline(
             create_abstract_evidence_record(record)
         )
 
-        abstract_chunks.append(
+        abstract_passages.append(
             abstract_record
         )
 
@@ -272,7 +317,27 @@ def run_pipeline(
     retrieval_items = (
         all_definition_candidates
         + full_text_chunks
-        + abstract_chunks
+        + abstract_passages
+    )
+
+    print(
+        "Definition candidates: "
+        f"{len(all_definition_candidates)}"
+    )
+
+    print(
+        "PMC full-text chunks: "
+        f"{len(full_text_chunks)}"
+    )
+
+    print(
+        "PubMed abstract passages: "
+        f"{len(abstract_passages)}"
+    )
+
+    print(
+        "Total retrieval items: "
+        f"{len(retrieval_items)}"
     )
 
     # -------------------------------------------------
@@ -282,11 +347,17 @@ def run_pipeline(
     retrieved = []
 
     if retrieval_items:
+
         retrieved = retrieve_relevant_texts(
             term,
             retrieval_items,
             top_k=top_k,
         )
+
+    print(
+        "Evidence passages retrieved: "
+        f"{len(retrieved)}"
+    )
 
     # -------------------------------------------------
     # Explicit definition selection

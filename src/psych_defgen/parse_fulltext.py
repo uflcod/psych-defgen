@@ -44,24 +44,59 @@ def parse_pmc_xml(xml_data):
         else "No title found"
     )
 
+    text_parts = []
+
+    #-----------------------------------------------------------
+    # Abstarct
+    #-----------------------------------------------------------
+
+    abstract = soup.find("abstract")
+
+    if abstract:
+        abstract_parts = []
+
+        for tag in abstract.find_all(["title"], "p"):
+            text = tag.get_text(" ",strip=True,)
+
+            if text:
+                abstract_parts.append(text)
+
+        if abstract_parts:
+            text_parts.append("\n".join(abstract_parts))
+
+    #-----------------------------------------------------------
+    # Article body
+    #-----------------------------------------------------------
+
     body = soup.find("body")
 
     if body:
-        text_parts = []
+
+        body_parts = []
 
         for tag in body.find_all(["title", "p"]):
             text = tag.get_text(" ", strip=True)
 
             if text:
-                text_parts.append(text)
+                body_parts.append(text)
 
-        body_text = "\n".join(text_parts)
+        if body_parts:
+            text_parts.append("\n".join(body_parts))
 
-        if body_text.strip():
-            return title, body_text
 
-    # Fallback if the <body> element is absent or empty.
-    article_text = soup.get_text(" ", strip=True)
+    #-----------------------------------------------------------
+    # Return abstract + body 
+    #-----------------------------------------------------------
+
+    article_text = "\n".join(text_parts).strip()
+
+    if article_text:
+        return title, article_text
+
+    # Fallback if neither abstract nor body
+    # could be extracted
+
+    article_text = soup.get_text("",strip=True,)
 
     return title, article_text
 
