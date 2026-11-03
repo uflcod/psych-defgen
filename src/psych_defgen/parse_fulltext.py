@@ -6,7 +6,11 @@ from .entrez_config import configure_entrez
 
 def fetch_pmc_full_text(pmcid, email=None, api_key=None):
     """Retrieve a PMC article as XML."""
-    configure_entrez(email=email, api_key=api_key,)
+
+    configure_entrez(
+        email=email,
+        api_key=api_key,
+    )
 
     handle = Entrez.efetch(
         db="pmc",
@@ -15,29 +19,89 @@ def fetch_pmc_full_text(pmcid, email=None, api_key=None):
         retmode="xml",
     )
 
-    xml_data = handle.read()
-    handle.close()
+    try:
+        xml_data = handle.read()
+    finally:
+        handle.close()
 
     return xml_data
 
 
+def extract_paragraphs(section):
+    """
+    Extract readable paragraphs from an XML section.
+
+    Exclude reference lists, tables, figures,
+    and supplementary material.
+    """
+
+    if section is None:
+        return []
+
+    paragraphs = []
+
+    excluded_tags = {
+        "ref-list",
+        "table-wrap",
+        "fig",
+        "supplementary-material",
+        "supplementary-material-wrap",
+    }
+
+    for paragraph in section.find_all("p"):
+
+        # Skip paragraphs inside excluded elements.
+        if any(
+            parent.name in excluded_tags
+            for parent in paragraph.parents
+        ):
+            continue
+
+        text = paragraph.get_text(
+            " ",
+            strip=True,
+        )
+
+        # Normalize whitespace.
+        text = " ".join(text.split())
+
+        if not text:
+            continue
+
+        # Remove very short fragments.
+        if len(text.split()) < 5:
+            continue
+
+        paragraphs.append(text)
+
+    return paragraphs
+
+
 def parse_pmc_xml(xml_data):
     """
-    Parse PMC XML and return the article title and full text.
+    Parse PMC XML and return the article title
+    and readable article text.
 
-    Parameters
-    ----------
-    xml_data : str or bytes
-        PMC article XML.
-
-    Returns
-    -------
-    tuple
-        Article title and extracted article text.
+    Extract only abstract and body paragraphs.
     """
-    soup = BeautifulSoup(xml_data, "xml")
 
-    title_tag = soup.find("article-title")
+    soup = BeautifulSoup(
+        xml_data,
+        "xml",
+    )
+
+    # --------------------------------------------------
+    # Article title
+    # --------------------------------------------------
+
+    article = soup.find("article")
+
+    title_tag = (
+        article.find("article-title")
+        if article
+        else soup.find("article-title")
+    )
+
     title = (
         title_tag.get_text(" ", strip=True)
         if title_tag
@@ -46,76 +110,91 @@ def parse_pmc_xml(xml_data):
 
     text_parts = []
 
-    #-----------------------------------------------------------
-    # Abstarct
-    #-----------------------------------------------------------
+    # --------------------------------------------------
+    # Abstract
+    # --------------------------------------------------
 
     abstract = soup.find("abstract")
 
-    if abstract:
-        abstract_parts = []
+    abstract_paragraphs = extract_paragraphs(
+        abstract
+    )
 
-        for tag in abstract.find_all(["title"], "p"):
-            text = tag.get_text(" ",strip=True,)
+    if abstract_paragraphs:
+        text_parts.extend(
+            abstract_paragraphs
+        )
 
-            if text:
-                abstract_parts.append(text)
-
-        if abstract_parts:
-            text_parts.append("\n".join(abstract_parts))
-
-    #-----------------------------------------------------------
+    # --------------------------------------------------
     # Article body
-    #-----------------------------------------------------------
+    # --------------------------------------------------
 
     body = soup.find("body")
 
-    if body:
+    body_paragraphs = extract_paragraphs(
+        body
+    )
 
-        body_parts = []
+    if body_paragraphs:
+        text_parts.extend(
+            body_paragraphs
+        )
 
-        for tag in body.find_all(["title", "p"]):
-            text = tag.get_text(" ", strip=True)
+    # --------------------------------------------------
+    # Remove duplicate paragraphs
+    # --------------------------------------------------
 
-            if text:
-                body_parts.append(text)
+    unique_parts = []
+    seen = set()
 
-        if body_parts:
-            text_parts.append("\n".join(body_parts))
+    for text in text_parts:
 
+        normalized = text.lower().strip()
 
-    #-----------------------------------------------------------
-    # Return abstract + body 
-    #-----------------------------------------------------------
+        if normalized in seen:
+            continue
 
-    article_text = "\n".join(text_parts).strip()
+        seen.add(normalized)
+        unique_parts.append(text)
 
-    if article_text:
-        return title, article_text
+    # --------------------------------------------------
+    # Return readable article text
+    # --------------------------------------------------
 
-    # Fallback if neither abstract nor body
-    # could be extracted
-
-    article_text = soup.get_text("",strip=True,)
+    article_text = "\n".join(
+        unique_parts
+    ).strip()
 
     return title, article_text
 
 
-def get_full_text_from_pmcid(pmcid, email=None, api_key=None):
+def get_full_text_from_pmcid(
+    pmcid,
+    email=None,
+    api_key=None,
+):
     """
     Retrieve and parse the full text of a PMC article.
 
     Parameters
     ----------
     pmcid : str
-        PubMed Central identifier, such as ``PMC1234567``.
+        PubMed Central identifier, such as PMC1234567.
 
     Returns
     -------
     tuple
         Article title and extracted article text.
     """
-    xml_data = fetch_pmc_full_text(pmcid, email=email, api_key=api_key)
-    title, text = parse_pmc_xml(xml_data)
+
+    xml_data = fetch_pmc_full_text(
+        pmcid,
+        email=email,
+        api_key=api_key,
+    )
+
+    title, text = parse_pmc_xml(
+        xml_data
+    )
 
     return title, text

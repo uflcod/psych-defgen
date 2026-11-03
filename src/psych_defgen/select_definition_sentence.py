@@ -1,36 +1,12 @@
+from psych_defgen.definition_patterns import (STRONG_DEFINITION_PATTERNS, CONCEPTUAL_DEFINITION_PATTERNS, FALLBACK_DEFINITION_PATTERNS,)
+from psych_defgen.llm_definition_selector import select_definition_with_llm
+
 import re
 
-
-EXPLICIT_DEFINITION_PATTERNS = [
-    "is defined as",
-    "was defined as",
-    "are defined as",
-    "were defined as",
-    "has been defined as",
-    "have been defined as",
-    "can be defined as",
-    "refers to",
-    "refer to",
-    "is a ",
-    "is an ",
-    "is the ",
-    "is characterized by",
-    "are characterized by",
-    "is conceptualized as",
-    "are conceptualized as",
-    "is understood as",
-    "are understood as",
-]
-
-
-FALLBACK_DEFINITION_PATTERNS = [
-    "involves",
-    "occurs when",
-    "stems from",
-    "typically defined by",
-    "defined by",
-]
-
+EXPLICIT_DEFINITION_PATTERNS = (
+    STRONG_DEFINITION_PATTERNS
+    + CONCEPTUAL_DEFINITION_PATTERNS
+)
 
 BAD_STUDY_PATTERNS = [
     "systematic review",
@@ -92,6 +68,26 @@ def get_term_variants(term):
 
     return variants
 
+def extract_embedded_definition(sentence, term):
+    """Extract a definition starting from the construct, preserving original wording."""
+    sentence = clean_sentence(sentence)
+
+    for variant in sorted(get_term_variants(term), key=len, reverse=True):
+        pattern = (
+            rf"\b{re.escape(variant)}\b"
+            rf"\s*,\s*"
+            rf"defined\b"
+            rf"[\s\S]*?"
+            rf"\bas\s+"
+            rf".+"
+        )
+
+        match = re.search(pattern, sentence, flags=re.IGNORECASE)
+
+        if match:
+            return sentence[match.start():].strip()
+
+    return None
 
 def normalize_for_matching(
     sentence,
@@ -193,6 +189,42 @@ def is_bad_study_sentence(
         for pattern in BAD_STUDY_PATTERNS
     )
 
+def has_embedded_definition_context(sentence, term):
+    """
+    Recognize contextual expressions within an already
+    valid definition sentence.
+
+    Embedded expressions alone do not establish a definition.
+    """
+    sentence = normalize_for_matching(sentence, term)
+    lower = sentence.lower()
+
+    matched_start = get_term_start(sentence, term)
+
+    if matched_start is None:
+        return False
+
+    remainder = lower[len(matched_start):].strip()
+
+    # Require an independently recognizable definition opening.
+    valid_opening = any(
+        remainder.startswith(pattern)
+        for pattern in EXPLICIT_DEFINITION_PATTERNS
+    )
+
+    if not valid_opening:
+        return False
+
+    embedded_patterns = (
+        "resulting from",
+        "determines",
+    )
+
+    return any(
+        pattern in remainder
+        for pattern in embedded_patterns
+    )
+
 
 def is_explicit_definition_sentence(
     sentence,
@@ -288,6 +320,7 @@ def is_fallback_definition_sentence(
     return any(
         remainder.startswith(pattern)
         for pattern in FALLBACK_DEFINITION_PATTERNS
+        if pattern not in ("resulting from", "determines")
     )
 
 
@@ -314,165 +347,62 @@ def is_definition_sentence(
     )
 
 
-def normalize_term_prefix_for_scoring(
-    sentence,
-    term,
-):
+def definition_score(sentence, term):
     """
-    Normalize optional leading articles only for
-    scoring.
+    Score definitions using shared linguistic patterns.
 
-    Example:
-
-    "The social environment refers to..."
-    becomes internally:
-
-    "social environment refers to..."
-
-    The original output sentence is preserved.
+    Strong: 100
+    Conceptual: 80
+    Noun-based: 70
+    Fallback: 50
     """
 
+    sentence = normalize_for_matching(sentence, term)
     lower = sentence.lower().strip()
-    term_lower = term.lower().strip()
 
-    if lower.startswith(
-        f"the {term_lower}"
-    ):
-        lower = lower[4:].strip()
+    matched_start = get_term_start(sentence, term)
 
-    elif lower.startswith(
-        f"a {term_lower}"
-    ):
-        lower = lower[2:].strip()
+    if matched_start is None:
+        return -1
 
-    return lower
+    word_count = len(sentence.split())
 
+    if word_count < 6 or word_count > 60:
+        return -1
 
-def definition_score(
-    sentence,
-    term,
-):
-    """
-    Score a valid definition sentence.
+    if is_bad_study_sentence(sentence):
+        return -1
 
-    Explicit definitions receive higher scores.
-
-    Fallback constructions receive lower scores
-    and are considered only when no explicit
-    definition exists.
-    """
-
-    matching_sentence = normalize_for_matching(
-        sentence,
-        term,
-    )
-    
-    lower = matching_sentence.lower().strip()
-
-    term_variants = get_term_variants(
-        term
-    )
-
-    # Remove optional leading articles for scoring.
-    for variant in term_variants:
-        if lower.startswith(
-            f"the {variant}"
-        ):
-            lower = lower[4:].strip()
-            break
-
-        if lower.startswith(
-            f"a {variant}"
-        ):
-            lower = lower[2:].strip()
-            break
-
-    strong_patterns = []
-
-    for variant in term_variants:
-        strong_patterns.extend(
-            [
-                f"{variant} is defined as",
-                f"{variant} was defined as",
-                f"{variant} are defined as",
-                f"{variant} were defined as",
-                f"{variant} has been defined as",
-                f"{variant} have been defined as",
-                f"{variant} can be defined as",
-                f"{variant} refers to",
-                f"{variant} refer to",
-            ]
-        )
+    remainder = lower[len(matched_start):].strip()
 
     if any(
-        lower.startswith(pattern)
-        for pattern in strong_patterns
+        remainder.startswith(pattern)
+        for pattern in STRONG_DEFINITION_PATTERNS
     ):
         return 100
 
-    conceptual_patterns = []
-
-    for variant in term_variants:
-        conceptual_patterns.extend(
-            [
-                f"{variant} is conceptualized as",
-                f"{variant} are conceptualized as",
-                f"{variant} is understood as",
-                f"{variant} are understood as",
-                f"{variant} is characterized by",
-                f"{variant} are characterized by",
-    
-            ]
-        )
+    noun_patterns = ("is a ", "is an ", "is the ")
 
     if any(
-            lower.startswith(pattern)
-            for pattern in conceptual_patterns
+        remainder.startswith(pattern)
+        for pattern in CONCEPTUAL_DEFINITION_PATTERNS
+        if pattern not in noun_patterns
     ):
         return 80
 
-    noun_definition_patterns = []
-
-    for variant in term_variants:
-        noun_definition_patterns.extend(
-            [
-                f"{variant} is a ",
-                f"{variant} is an ",
-                f"{variant} is the ",
-            ]
-        )
-
     if any(
-        lower.startswith(pattern)
-        for pattern in noun_definition_patterns
+        remainder.startswith(pattern)
+        for pattern in noun_patterns
     ):
         return 70
 
-
-    if is_fallback_definition_sentence(
-        matching_sentence,
-        term,
+    if any(
+        remainder.startswith(pattern)
+        for pattern in FALLBACK_DEFINITION_PATTERNS
     ):
-
-        fallback_patterns = []
-
-        for variant in term_variants:
-            fallback_patterns.extend(
-
-                [
-                    f"{variant} involves",
-                    f"{variant} occurs when",
-                    f"{variant} stems from",
-                    f"{variant} typically defined by",
-                    f"{variant} defined by",
-                ]
-            )
-
-        if any(
-            lower.startswith(pattern)
-            for pattern in fallback_patterns
-        ):
-            return 50
+        # Causal or relational statements alone are not definitions.
+        if remainder.startswith(("resulting from", "determines")):
+            return -1
 
         return 50
 
@@ -482,6 +412,10 @@ def definition_score(
 def select_best_definition_sentence(
     term,
     retrieved_items,
+    provider="ollama",
+    model="qwen2.5:7b",
+    api_key=None,
+    base_url=None,
 ):
     """
     Select the strongest definition sentence.
@@ -510,21 +444,31 @@ def select_best_definition_sentence(
             0.0,
         )
 
-        for sentence in split_sentences(
-            text
-        ):
 
-            original_sentence = clean_sentence(
-                sentence
+        for sentence in split_sentences(text):
+
+            original_sentence = clean_sentence(sentence)
+
+            embedded_definition = extract_embedded_definition(
+                original_sentence,
+                term,
             )
 
             output_sentence = (
-                normalize_for_matching(
+                embedded_definition
+                if embedded_definition
+                else normalize_for_matching(
                     original_sentence,
                     term,
                 )
             )
 
+            if embedded_definition:
+                explicit_candidates.append(
+                    (100, retrieval_score, output_sentence)
+                )
+                continue
+            
             score = definition_score(
                 output_sentence,
                 term,
@@ -562,7 +506,19 @@ def select_best_definition_sentence(
         candidates = fallback_candidates
 
     else:
-        return None
+        llm_definition, selection_usage = select_definition_with_llm(
+            term,
+            retrieved_items,
+            provider=provider,
+            model=model,
+            api_key=api_key,
+            base_url=base_url,
+        )
+
+        if llm_definition:
+            return llm_definition, "llm_selection", selection_usage
+
+        return None, None, selection_usage
 
     candidates.sort(
         key=lambda item: (
@@ -572,4 +528,4 @@ def select_best_definition_sentence(
         reverse=True,
     )
 
-    return candidates[0][2]
+    return candidates[0][2], "pattern", None

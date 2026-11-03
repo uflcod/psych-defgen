@@ -11,10 +11,10 @@ def configure_entrez(
     api_key=None,
 ) -> None:
     """
-    Configure Biopython Entrez.
+    Configure Biopython Entrez with an NCBI email and optional API key.
 
-    Explicit parameters take priority over
-    environment variables.
+    Function arguments take priority over environment variables.
+    Raises RuntimeError if no NCBI email is provided.
     """
 
     resolved_email = (
