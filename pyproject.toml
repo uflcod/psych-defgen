@@ -1,7 +1,7 @@
 [project]
 name = "psych-defgen"
-version = "0.0.1a2"
-description = "A Python package for retrieving evidence-based definitions of psychological constructs from scientific literature."
+version = "0.0.1b1"
+description = "A Python package for retrieving and synthesizing evidence-based definitions of psychological constructs from scientific literature using configurable language models."
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]
@@ -24,8 +24,10 @@ dependencies = [
     "sentence-transformers",
     "torch",
     "tqdm",
-    "playwright>=1.61.0",
+    "playwright==1.62.0",
     "streamlit",
+    "ollama>=0.6.3",
+    "openai>=2.9.0",
 ]
 
 [project.scripts]

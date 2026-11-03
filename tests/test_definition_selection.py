@@ -1,3 +1,5 @@
+
+from unittest.mock import patch
 from psych_defgen.select_definition_sentence import (
     select_best_definition_sentence,
 )
@@ -14,15 +16,12 @@ def test_selects_explicit_definition():
         }
     ]
 
-    result = select_best_definition_sentence(
-        "loneliness",
-        items,
+    definition, _, _ = select_best_definition_sentence(
+        "loneliness", items
     )
 
-    assert result is not None
-    assert result.startswith(
-        "Loneliness is defined as"
-    )
+    assert definition is not None
+    assert definition.startswith("Loneliness is defined as")
 
 
 def test_rejects_non_definition():
@@ -36,12 +35,15 @@ def test_rejects_non_definition():
         }
     ]
 
-    result = select_best_definition_sentence(
-        "loneliness",
-        items,
-    )
+    with patch(
+        "psych_defgen.select_definition_sentence.select_definition_with_llm",
+        return_value=(None, None),
+    ):
+        definition, _, _ = select_best_definition_sentence(
+            "loneliness", items
+        )
 
-    assert result is None
+    assert definition is None
 
 
 def test_selects_definition_with_the_prefix():
@@ -55,13 +57,12 @@ def test_selects_definition_with_the_prefix():
         }
     ]
 
-    result = select_best_definition_sentence(
-        "social environment",
-        items,
+    definition, _, _ = select_best_definition_sentence(
+        "social environment", items
     )
 
-    assert result is not None
-    assert result.startswith(
+    assert definition is not None
+    assert definition.startswith(
         "The social environment refers to"
     )
 
@@ -77,12 +78,15 @@ def test_rejects_noisy_non_definition():
         }
     ]
 
-    result = select_best_definition_sentence(
-        "social environment",
-        items,
-    )
+    with patch(
+        "psych_defgen.select_definition_sentence.select_definition_with_llm",
+        return_value=(None, None),
+    ):
+        definition, _, _ = select_best_definition_sentence(
+            "social environment", items
+        )
 
-    assert result is None
+    assert definition is None
 
 
 def test_selects_was_defined_as_definition():
@@ -97,13 +101,12 @@ def test_selects_was_defined_as_definition():
         }
     ]
 
-    result = select_best_definition_sentence(
-        "living status",
-        items,
+    definition, _, _ = select_best_definition_sentence(
+        "living status", items
     )
 
-    assert result is not None
-    assert result.startswith(
+    assert definition is not None
+    assert definition.startswith(
         "Living status was defined as"
     )
 
@@ -120,12 +123,11 @@ def test_selects_plural_definition_for_singular_term():
         }
     ]
 
-    result = select_best_definition_sentence(
-        "psychosocial factor",
-        items,
+    definition, _, _ = select_best_definition_sentence(
+        "psychosocial factor", items
     )
 
-    assert result is not None
-    assert result.startswith(
+    assert definition is not None
+    assert definition.startswith(
         "Psychosocial factors have been defined as"
     )

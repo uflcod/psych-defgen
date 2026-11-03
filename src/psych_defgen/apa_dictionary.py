@@ -122,33 +122,20 @@ def is_generic_apa_page(page_text: str) -> bool:
 
 
 def term_matches_text(term: str, candidate_text: str) -> bool:
-    """
-    Compare the requested term with a possible entry heading,
-    page title, or URL slug.
-    """
+    """Check whether a heading exactly matches the requested term."""
 
     normalized_term = normalize_term(term)
     normalized_candidate = normalize_term(candidate_text)
 
-    if not normalized_term or not normalized_candidate:
-        return False
-
-    if normalized_term == normalized_candidate:
-        return True
-
-    # Some APA headings may contain part-of-speech labels,
-    # abbreviations, or punctuation after the entry term.
-    if normalized_candidate.startswith(
-        f"{normalized_term} "
-    ):
-        return True
-
-    return False
+    return bool(
+        normalized_term
+        and normalized_term == normalized_candidate
+    )
 
 
 def find_entry_heading(page, term: str) -> str | None:
     """
-    Search rendered headings for one matching the requested term.
+    Find an APA Dictionary entry title matching the requested term.
     """
 
     selectors = [
@@ -158,15 +145,14 @@ def find_entry_heading(page, term: str) -> str | None:
         "[role='heading']",
         "[class*='title']",
         "[class*='term']",
-        "[class*='entry'] h1",
-        "[class*='entry'] h2",
-        "[class*='entry'] h3",
+        "[class*='headword']",
+        "span[xmlns='http://apa.org/dop/enriched']",
     ]
 
     for selector in selectors:
         try:
             elements = page.locator(selector)
-            count = min(elements.count(), 50)
+            count = min(elements.count(), 100)
 
             for index in range(count):
                 text = elements.nth(index).inner_text(
@@ -180,7 +166,6 @@ def find_entry_heading(page, term: str) -> str | None:
             continue
 
     return None
-
 
 def get_apa_dictionary_entry(
     term: str,
@@ -338,6 +323,7 @@ def get_apa_dictionary_entry(
                 body_text
             )
 
+
             # A clear missing-entry message is the strongest
             # evidence that the term is absent.
             if contains_missing_entry_message(
@@ -368,35 +354,6 @@ def get_apa_dictionary_entry(
                     "page_title": page_title,
                 }
 
-            # Check whether the final URL still contains the
-            # expected APA term slug.
-            final_slug = final_url.rstrip("/").split("/")[-1]
-            final_slug = final_slug.split("?")[0]
-            final_slug = normalize_term(final_slug)
-
-            expected_term = normalize_term(original_term)
-
-            url_matches = (
-                final_slug == expected_term
-            )
-
-            # Existing APA entry pages commonly include the
-            # term in the rendered page body.
-            body_contains_term = bool(
-                re.search(
-                    rf"\b{re.escape(expected_term)}\b",
-                    normalized_body,
-                )
-            )
-
-            if url_matches and body_contains_term:
-                browser.close()
-
-                return {
-                    **result,
-                    "status": "found",
-                    "page_title": page_title,
-                }
 
             # The generic application page does not give enough
             # evidence to claim that the entry is absent.
@@ -444,47 +401,3 @@ def get_apa_dictionary_entry(
             "error": str(error),
         }
 
-
-# Compatibility alias.
-#
-# This allows existing main.py code that currently imports
-# get_apa_dictionary_definition() to continue working.
-# The function now checks only for an entry and URL; it does
-# not retrieve a definition.
-def get_apa_dictionary_definition(
-    term: str,
-) -> dict:
-    """
-    Compatibility wrapper for older code.
-
-    Despite the old function name, no definition is extracted.
-    """
-
-    return get_apa_dictionary_entry(term)
-
-
-if __name__ == "__main__":
-    test_terms = [
-        "loneliness",
-        "gerotranscendence",
-    ]
-
-    for test_term in test_terms:
-        entry = get_apa_dictionary_entry(
-            test_term,
-            headless=True,
-        )
-
-        print("=" * 60)
-        print("Term:", entry["term"])
-        print("Status:", entry["status"])
-        print("URL:", entry["url"])
-
-        if entry.get("entry_heading"):
-            print(
-                "Entry heading:",
-                entry["entry_heading"],
-            )
-
-        if entry.get("error"):
-            print("Message:", entry["error"])

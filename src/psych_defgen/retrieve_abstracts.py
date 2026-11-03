@@ -1,17 +1,17 @@
+import re
+
 from Bio import Entrez
 
 from .entrez_config import configure_entrez
 
 
 def _extract_authors(author_list):
-    """
-    Convert a PubMed author list into readable names.
-    """
-
+    """Extract readable author names from PubMed author records."""
     authors = []
 
     for author in author_list or []:
         collective_name = author.get("CollectiveName")
+
         if collective_name:
             authors.append(str(collective_name))
             continue
@@ -31,78 +31,50 @@ def _extract_authors(author_list):
 
 
 def _extract_abstract_text(abstract_sections):
-    """
-    Combine labeled PubMed abstract sections into one string.
-    """
-
-    if not abstract_sections:
-        return ""
-
+    """Combine PubMed abstract sections, preserving section labels."""
     sections = []
 
-    for section in abstract_sections:
+    for section in abstract_sections or []:
         text = str(section).strip()
 
         if not text:
             continue
 
         label = getattr(section, "attributes", {}).get("Label")
-
-        if label:
-            sections.append(f"{label}: {text}")
-        else:
-            sections.append(text)
+        sections.append(f"{label}: {text}" if label else text)
 
     return "\n".join(sections)
 
 
 def _extract_publication_year(article_record):
-    """
-    Extract the publication year from available PubMed date fields.
-    """
-
-    journal_issue = (
-        article_record
-        .get("MedlineCitation", {})
+    """Extract the publication year from PubMed journal date metadata."""
+    pub_date = (
+        article_record.get("MedlineCitation", {})
         .get("Article", {})
         .get("Journal", {})
         .get("JournalIssue", {})
+        .get("PubDate", {})
     )
 
-    pub_date = journal_issue.get("PubDate", {})
-
     year = pub_date.get("Year")
+
     if year:
         return str(year)
 
-    medline_date = pub_date.get("MedlineDate")
-    if medline_date:
-        return str(medline_date)
+    medline_date = pub_date.get("MedlineDate", "")
+    match = re.search(r"\b(?:19|20)\d{2}\b", str(medline_date))
 
-    return None
+    return match.group(0) if match else None
 
 
 def fetch_pubmed_abstracts(pmids, email=None, api_key=None):
     """
-    Fetch PubMed abstracts and article metadata.
+    Retrieve PubMed abstracts and associated article metadata.
 
-    Parameters
-    ----------
-    pmids : list
-        List of PubMed IDs.
-
-    Returns
-    -------
-    list[dict]
-        Structured abstract records containing the PMID,
-        title, authors, journal, publication year, URL,
-        and abstract text.
+    Return records containing article identifiers, title,
+    authors, journal, publication year, abstract, and source URL.
     """
-
-    configure_entrez(
-        email=email, 
-        api_key=api_key,
-    )
+    configure_entrez(email=email, api_key=api_key)
 
     if not pmids:
         return []
@@ -122,61 +94,22 @@ def fetch_pubmed_abstracts(pmids, email=None, api_key=None):
     abstract_records = []
 
     for pubmed_article in records.get("PubmedArticle", []):
-        medline_citation = pubmed_article.get(
-            "MedlineCitation",
-            {},
-        )
+        medline_citation = pubmed_article.get("MedlineCitation", {})
+        article = medline_citation.get("Article", {})
 
-        article = medline_citation.get(
-            "Article",
-            {},
-        )
-
-        pmid = str(
-            medline_citation.get("PMID", "")
-        ).strip()
-
-        title = str(
-            article.get(
-                "ArticleTitle",
-                "Title unavailable",
-            )
-        ).strip()
-
-        abstract_data = article.get(
-            "Abstract",
-            {},
-        )
-
-        abstract_sections = abstract_data.get(
-            "AbstractText",
-            [],
-        )
+        pmid = str(medline_citation.get("PMID", "")).strip()
+        title = str(article.get("ArticleTitle", "Title unavailable")).strip()
 
         abstract_text = _extract_abstract_text(
-            abstract_sections
+            article.get("Abstract", {}).get("AbstractText", [])
         )
 
         if not abstract_text:
             continue
 
-        authors = _extract_authors(
-            article.get("AuthorList", [])
-        )
-
-        journal = str(
-            article.get(
-                "Journal",
-                {},
-            ).get(
-                "Title",
-                "",
-            )
-        ).strip()
-
-        year = _extract_publication_year(
-            pubmed_article
-        )
+        authors = _extract_authors(article.get("AuthorList", []))
+        journal = str(article.get("Journal", {}).get("Title", "")).strip()
+        year = _extract_publication_year(pubmed_article)
 
         abstract_records.append(
             {
@@ -189,8 +122,7 @@ def fetch_pubmed_abstracts(pmids, email=None, api_key=None):
                 "source": "PubMed abstract",
                 "pubmed_url": (
                     f"https://pubmed.ncbi.nlm.nih.gov/{pmid}/"
-                    if pmid
-                    else None
+                    if pmid else None
                 ),
             }
         )

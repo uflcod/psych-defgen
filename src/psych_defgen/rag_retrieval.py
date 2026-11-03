@@ -1,32 +1,13 @@
+from psych_defgen.definition_patterns import DEFINITION_KEYWORDS
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
 
-
-DEFINITION_PATTERNS = [
-    "occurs when",
-    "defined as",
-    "is defined as",
-    "refers to",
-    "stems from",
-    "is characterized by",
-    "is conceptualized as",
-    "is understood as",
-    "determines",
-]
-
-
-CONCEPT_HINTS = [
-    "risk",
-    "disadvantage",
-    "conditions",
-    "factors",
-    "capacity",
-    "vulnerability",
-    "susceptibility",
-    "exposure",
-    "outcomes",
-    "social",
-]
+from psych_defgen.select_definition_sentence import (
+    split_sentences,
+    clean_sentence,
+    is_explicit_definition_sentence,
+    is_fallback_definition_sentence,
+)
 
 
 def has_definition_pattern(text, term=None):
@@ -45,10 +26,9 @@ def has_definition_pattern(text, term=None):
 
     text_lower = text.lower()
 
-    # General definition patterns.
     if any(
         pattern in text_lower
-        for pattern in DEFINITION_PATTERNS
+        for pattern in DEFINITION_KEYWORDS
     ):
         return True
 
@@ -80,54 +60,16 @@ def has_definition_pattern(text, term=None):
     return False
 
 
-def is_useful_text(text, term=None):
-    """
-    Remove article titles, very short snippets,
-    and non-informative evidence.
-
-    Definition-like passages are retained even
-    when they are relatively short.
-    """
-
-    if not text:
-        return False
-
-    text = text.strip()
+def is_useful_text(text: str, term: str) -> bool:
     words = text.split()
-    text_lower = text.lower()
 
-    # Remove very short text.
     if len(words) < 12:
         return False
 
-    definition_like = has_definition_pattern(
-        text,
-        term=term,
-    )
-
-    # Remove likely title-only text unless it
-    # contains definitional language.
-    if (
-        len(words) < 30
-        and not definition_like
-    ):
-        return False
-
-    # Always keep definition-like passages.
-    if definition_like:
+    if has_definition_pattern(text, term):
         return True
 
-    # Keep longer conceptual passages.
-    if (
-        len(words) >= 30
-        and any(
-            hint in text_lower
-            for hint in CONCEPT_HINTS
-        )
-    ):
-        return True
-
-    return False
+    return len(words) >= 30
 
 
 def normalize_evidence_item(item):
@@ -175,6 +117,45 @@ def normalize_evidence_item(item):
         "url": item.get("url"),
     }
 
+def select_evidence_sentence(term, passage):
+    """
+    Select a definition-like sentence without
+    calculating sentence similarity scores.
+    """
+
+    sentences = []
+
+    for sentence in split_sentences(passage):
+        sentence = clean_sentence(sentence)
+
+        if not sentence:
+            continue
+
+        words = sentence.split()
+
+        if len(words) < 8 or len(words) > 150:
+            continue
+
+        if sum(char.isalpha() for char in sentence) < 30:
+            continue
+
+        sentences.append(sentence)
+
+    for category, checker in [
+        ("Explicit definition", is_explicit_definition_sentence),
+        ("Conceptual definition", is_fallback_definition_sentence),
+    ]:
+        for sentence in sentences:
+            if checker(sentence, term):
+                return {
+                    "evidence_sentence": sentence,
+                    "evidence_type": category,
+                }
+
+    return {
+        "evidence_sentence": None,
+        "evidence_type": "Related evidence" if sentences else "Unusable extracted text",
+    }
 
 def retrieve_relevant_texts(
     term,
@@ -219,20 +200,23 @@ def retrieve_relevant_texts(
     model = SentenceTransformer(
         "all-MiniLM-L6-v2"
     )
+    
+    # Multiple definition-focused queries.
+    queries = [
+        f"What is {term}?",
+        f"How is {term} defined in scientific literature?",
+        f"What does {term} refer to?",
+        f"What are the defining characteristics of {term}?",
+        f"Conceptual definition and meaning of {term}",
+    ]
 
-    # Focus retrieval on definitional and
-    # conceptual information rather than
-    # causes, consequences, or interventions.
-    query = (
-        f"Definition, meaning, characteristics, "
-        f"and conceptual explanation of {term}"
-    )
-
-    query_embedding = model.encode(
-        [query],
+    # Generate query embeddings.
+    query_embeddings = model.encode(
+        queries,
         convert_to_numpy=True,
     )
 
+    # Generate evidence embeddings.
     evidence_texts = [
         item["text"]
         for item in normalized_items
@@ -243,10 +227,14 @@ def retrieve_relevant_texts(
         convert_to_numpy=True,
     )
 
-    similarities = cosine_similarity(
-        query_embedding,
+    # Calculate similarity for every query-evidence pair.
+    similarity_matrix = cosine_similarity(
+        query_embeddings,
         text_embeddings,
-    )[0]
+    )
+
+    # Average the five similarity scores per passage.
+    similarities = similarity_matrix.mean(axis=0)
 
     scored_items = []
 
@@ -268,7 +256,6 @@ def retrieve_relevant_texts(
         reverse=True,
     )
 
-    
     selected = []
     article_counts = {}
 
@@ -277,23 +264,21 @@ def retrieve_relevant_texts(
             item.get("pmid")
             or item.get("pmcid")
             or item.get("title")
+            or id(item)
         )
 
-        count = article_counts.get(
-            article_id,
-            0,
-        )
+        count = article_counts.get(article_id, 0)
 
         if count >= 2:
             continue
 
         selected.append(item)
-
-        article_counts[article_id] = (
-            count + 1
-        )
+        article_counts[article_id] = count + 1
 
         if len(selected) >= top_k:
             break
+
+    for item in selected:
+        item["context_text"] = item["text"]
 
     return selected
