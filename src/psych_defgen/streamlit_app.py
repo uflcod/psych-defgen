@@ -133,6 +133,7 @@ if st.button("Retrieve definition", type="primary"):
 
         definition_method = result.get("definition_method")
         definition = result.get("definition")
+        definition_source = result.get("definition_source")
         generated_definition = result.get("generated_definition")
         evidence = result.get("evidence", [])
         llm_usage = result.get("llm_usage")
@@ -172,6 +173,51 @@ if st.button("Retrieve definition", type="primary"):
 
             )
 
+
+        if definition_source:
+            with st.expander("Definition Source", expanded=True):
+
+                title = definition_source.get("title")
+                if title:
+                    st.write(f"**Article:** {title}")
+
+                authors = definition_source.get("authors")
+                if authors:
+                    st.write(f"**Authors:** {', '.join(authors)}")
+
+                journal = definition_source.get("journal")
+                if journal:
+                    st.write(f"**Journal:** {journal}")
+
+                year = definition_source.get("year")
+                if year:
+                    st.write(f"**Year:** {year}")
+
+                source = definition_source.get("source")
+                if source:
+                    st.write(f"**Source:** {source}")
+
+                pmid = definition_source.get("pmid")
+                if pmid:
+                    st.write(f"**PMID:** {pmid}")
+
+                pmcid = definition_source.get("pmcid")
+                if pmcid:
+                    st.write(f"**PMCID:** {pmcid}")
+
+                pubmed_url = definition_source.get("pubmed_url")
+                if pubmed_url:
+                    st.link_button(
+                        "View Definition Source on PubMed",
+                        pubmed_url,
+                    )
+
+                full_text_url = definition_source.get("url")
+                if full_text_url:
+                    st.link_button(
+                        "View Definition Source Full Text",
+                        full_text_url,
+                    )
         # --------------------------------------------------
         # 2. AI-Synthesized Definition
         # --------------------------------------------------
