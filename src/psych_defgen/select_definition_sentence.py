@@ -465,7 +465,7 @@ def select_best_definition_sentence(
 
             if embedded_definition:
                 explicit_candidates.append(
-                    (100, retrieval_score, output_sentence)
+                    (100, retrieval_score, output_sentence, item)
                 )
                 continue
             
@@ -481,6 +481,7 @@ def select_best_definition_sentence(
                 score,
                 retrieval_score,
                 output_sentence,
+                item,
             )
 
             if is_explicit_definition_sentence(
@@ -506,19 +507,26 @@ def select_best_definition_sentence(
         candidates = fallback_candidates
 
     else:
-        llm_definition, selection_usage = select_definition_with_llm(
-            term,
-            retrieved_items,
-            provider=provider,
-            model=model,
-            api_key=api_key,
-            base_url=base_url,
+        llm_definition, definition_source, selection_usage = (
+            select_definition_with_llm(
+                term,
+                retrieved_items,
+                provider=provider,
+                model=model,
+                api_key=api_key,
+                base_url=base_url,
+            )
         )
 
         if llm_definition:
-            return llm_definition, "llm_selection", selection_usage
+            return (
+                llm_definition,
+                "llm_selection",
+                definition_source,
+                selection_usage,
+            )
 
-        return None, None, selection_usage
+        return None, None, None, selection_usage
 
     candidates.sort(
         key=lambda item: (
@@ -528,4 +536,9 @@ def select_best_definition_sentence(
         reverse=True,
     )
 
-    return candidates[0][2], "pattern", None
+    return (
+    candidates[0][2],
+    "pattern",
+    candidates[0][3],
+    None,
+    )

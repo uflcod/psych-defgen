@@ -16,7 +16,7 @@ def test_selects_explicit_definition():
         }
     ]
 
-    definition, _, _ = select_best_definition_sentence(
+    definition, _, _, _ = select_best_definition_sentence(
         "loneliness", items
     )
 
@@ -37,9 +37,9 @@ def test_rejects_non_definition():
 
     with patch(
         "psych_defgen.select_definition_sentence.select_definition_with_llm",
-        return_value=(None, None),
+        return_value=(None, None, None),
     ):
-        definition, _, _ = select_best_definition_sentence(
+        definition, _, _, _ = select_best_definition_sentence(
             "loneliness", items
         )
 
@@ -57,7 +57,7 @@ def test_selects_definition_with_the_prefix():
         }
     ]
 
-    definition, _, _ = select_best_definition_sentence(
+    definition, _, _, _ = select_best_definition_sentence(
         "social environment", items
     )
 
@@ -80,9 +80,9 @@ def test_rejects_noisy_non_definition():
 
     with patch(
         "psych_defgen.select_definition_sentence.select_definition_with_llm",
-        return_value=(None, None),
+        return_value=(None, None, None),
     ):
-        definition, _, _ = select_best_definition_sentence(
+        definition, _, _, _ = select_best_definition_sentence(
             "social environment", items
         )
 
@@ -101,7 +101,7 @@ def test_selects_was_defined_as_definition():
         }
     ]
 
-    definition, _, _ = select_best_definition_sentence(
+    definition, _, _, _ = select_best_definition_sentence(
         "living status", items
     )
 
@@ -123,7 +123,7 @@ def test_selects_plural_definition_for_singular_term():
         }
     ]
 
-    definition, _, _ = select_best_definition_sentence(
+    definition, _, _, _ = select_best_definition_sentence(
         "psychosocial factor", items
     )
 
@@ -131,3 +131,27 @@ def test_selects_plural_definition_for_singular_term():
     assert definition.startswith(
         "Psychosocial factors have been defined as"
     )
+
+def test_preserves_definition_source():
+    items = [
+        {
+            "text": (
+                "Loneliness is defined as a distressing "
+                "feeling resulting from unmet social needs."
+            ),
+            "score": 0.9,
+            "title": "Example article",
+            "pmid": "12345678",
+            "source": "PMC",
+        }
+    ]
+
+    definition, method, source, usage = (
+        select_best_definition_sentence("loneliness", items)
+    )
+
+    assert definition is not None
+    assert method == "pattern"
+    assert source == items[0]
+    assert source["pmid"] == "12345678"
+    assert source["title"] == "Example article"

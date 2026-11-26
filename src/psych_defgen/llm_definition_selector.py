@@ -15,15 +15,17 @@ def select_definition_with_llm(
     """
 
     passages = []
+    passage_sources = []
 
     for item in retrieved_items[:10]:
         text = item.get("text") or item.get("context_text") or ""
 
         if text.strip():
             passages.append(text.strip())
+            passage_sources.append(item)
 
     if not passages:
-        return None, None
+        return None, None, None
 
     numbered_passages = "\n\n".join(
         f"Evidence {i + 1}:\n{text}"
@@ -81,16 +83,16 @@ EVIDENCE:
         definition = result.get("definition")
 
         if not isinstance(definition, str) or not definition.strip():
-            return None, usage
+            return None, None, usage
 
         definition = definition.strip()
 
-        # Verify that the selected definition exists in the evidence.
-        for passage in passages:
+        # Verify the definition and preserve its source.
+        for passage, source in zip(passages, passage_sources):
             if definition in passage:
-                return definition, usage
+                return definition, source, usage
 
     except (json.JSONDecodeError, KeyError, TypeError):
         pass
 
-    return None, usage
+    return None, None, usage

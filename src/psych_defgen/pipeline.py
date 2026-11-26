@@ -254,7 +254,12 @@ def run_pipeline(
         )
 
 
-    best_definition_sentence, definition_method, selection_usage = select_best_definition_sentence(
+    (
+        best_definition_sentence,
+        definition_method,
+        definition_source,
+        selection_usage,
+    ) = select_best_definition_sentence(
         term,
         all_definition_candidates + retrieved,
         provider=llm_provider,
@@ -265,6 +270,30 @@ def run_pipeline(
 
     generated_definition = None
     synthesis_usage = None
+
+    # Preserve provenance for the selected literature definition.
+    if definition_source:
+        definition_source = definition_source.copy()
+
+        source_pmid = str(definition_source.get("pmid") or "")
+
+        if source_pmid and not definition_source.get("authors"):
+            try:
+                source_authors = authors_by_pmid.get(source_pmid)
+
+                if not source_authors:
+                    source_authors = fetch_pubmed_authors(
+                        [source_pmid],
+                        email=email,
+                        api_key=api_key,
+                    ).get(source_pmid, [])
+
+                definition_source["authors"] = source_authors
+
+            except Exception as error:
+                print(
+                    f"Could not retrieve definition source authors: {error}"
+                )
 
     if retrieved:
         generation_result = generate_definition_with_llm(
@@ -320,6 +349,7 @@ def run_pipeline(
         "apa_entry": apa_entry,
         "definition": definition_from_literature,
         "definition_method": definition_method,
+        "definition_source": definition_source,
         "generated_definition": generated_definition,
         "llm_usage": llm_usage,
         "evidence": retrieved,

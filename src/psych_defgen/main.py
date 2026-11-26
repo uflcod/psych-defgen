@@ -5,7 +5,6 @@ import click
 
 from psych_defgen.pipeline import run_pipeline
 
-
 def save_output(
     term,
     apa_entry,
@@ -13,6 +12,7 @@ def save_output(
     evidence,
     output_path=None,
     output_dir="outputs",
+    definition_source=None,
 ):
     """
     Save the retrieved definition, APA Dictionary reference,
@@ -70,6 +70,44 @@ def save_output(
 
         file.write("## Definition from Literature\n\n")
         file.write(definition_from_literature.strip() + "\n\n")
+
+        if definition_source:
+            file.write("### Definition Source\n\n")
+
+            for key, label in [
+                ("title", "Article"),
+                ("journal", "Journal"),
+                ("year", "Year"),
+                ("source", "Source"),
+                ("pmid", "PMID"),
+                ("pmcid", "PMCID"),
+            ]:
+                value = definition_source.get(key)
+
+                if value:
+                    file.write(f"**{label}:** {value}\n\n")
+
+            authors = definition_source.get("authors")
+
+            if authors:
+                file.write(
+                    f"**Authors:** {', '.join(authors)}\n\n"
+                )
+
+            pubmed_url = definition_source.get("pubmed_url")
+
+            if pubmed_url:
+                file.write(
+                    f"**PubMed:** [View article]({pubmed_url})\n\n"
+                )
+
+            full_text_url = definition_source.get("url")
+
+            if full_text_url:
+                file.write(
+                    f"**Full text:** [View article]({full_text_url})\n\n"
+                )
+
 
         file.write("## Retrieved Evidence\n\n")
 
@@ -188,12 +226,14 @@ def main(max_results, top_k, email, api_key, output, term):
         api_key=api_key,
     )
 
+
     output_path = save_output(
         term=term,
         apa_entry=result["apa_entry"],
         definition_from_literature=result["definition"],
         evidence=result["evidence"],
         output_path=output,
+        definition_source=result.get("definition_source"),
     )
 
     click.echo(f"Saved output to: {output_path}")
